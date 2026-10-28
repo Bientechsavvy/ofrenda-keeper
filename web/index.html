@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ofrenda Keeper</title>
+<style>
+  /* ---------- Design tokens ---------- */
+  :root {
+    --night: #14102b;      /* page background */
+    --night-2: #1d1740;    /* cards */
+    --night-3: #2a2257;    /* inputs */
+    --ink: #f4efe6;        /* main text */
+    --muted: #b9b2d6;      /* secondary text */
+    --marigold: #f5a524;   /* accent */
+    --marigold-2: #ffcf6b;
+    --rose: #e0527f;
+    --ok: #7fe0a8;
+    --line: #3b3270;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--night); color: var(--ink);
+    font: 16px/1.55 Georgia, "Times New Roman", serif;
+  }
+  body::before { /* faint glow at the top of the page */
+    content: ""; position: fixed; inset: 0 0 auto 0; height: 360px; pointer-events: none;
+    background: radial-gradient(60% 100% at 50% 0%, rgba(245,165,36,.18), transparent 70%);
+  }
+  header, main, footer { max-width: 1100px; margin: 0 auto; padding: 0 16px; position: relative; }
+  header { padding-top: 28px; padding-bottom: 8px; }
+  h1 { margin: 0; font-size: 1.9rem; letter-spacing: .02em; }
+  h1 span { color: var(--marigold); }
+  .tag { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+  .layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; margin-top: 18px; align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+  /* ---------- Form card ---------- */
+  .panel { background: var(--night-2); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .panel h2 { margin: 0 0 10px; font-size: 1.1rem; }
+  label { display: block; font: 600 .86rem system-ui, sans-serif; margin: 12px 0 4px; color: var(--ink); }
+  .hint { font: .78rem system-ui, sans-serif; color: var(--muted); font-weight: 400; }
+  input[type=text], textarea {
+    width: 100%; background: var(--night-3); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; padding: 9px 10px; font: .95rem system-ui, sans-serif;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  input:focus, textarea:focus, button:focus-visible, .chip:focus-visible { outline: 2px solid var(--marigold); outline-offset: 2px; }
+  .chips { display: flex; flex-direction: column; gap: 8px; }
+  .chip {
+    text-align: left; background: var(--night-3); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; font: .92rem system-ui, sans-serif; cursor: pointer;
+  }
+  .chip:hover, .chip.on { border-color: var(--marigold); }
+  .go {
+    width: 100%; margin-top: 16px; background: var(--marigold); color: #2a1a00; border: 0; border-radius: 10px;
+    padding: 12px; font: 700 1rem system-ui, sans-serif; cursor: pointer;
+  }
+  .go:disabled { opacity: .6; cursor: progress; }
+  .small { font: .8rem system-ui, sans-serif; color: var(--muted); margin: 10px 0 0; }
+  .consent { display: none; margin-top: 12px; font: .85rem system-ui, sans-serif; }
+  .consent input { margin-right: 6px; }
+  .error { display: none; margin-top: 12px; background: #3b1630; border: 1px solid var(--rose); color: #ffd3e0;
+           padding: 10px 12px; border-radius: 8px; font: .88rem system-ui, sans-serif; }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .pill { font: 600 .74rem system-ui, sans-serif; padding: 4px 10px; border-radius: 999px; background: #20365a; color: #bfe0ff; }
+  .pill.green { background: #17402f; color: var(--ok); }
+
+  /* ---------- The ofrenda (also saved into the downloaded file) ---------- */
+  .ofrenda {
+    position: relative; text-align: center; padding: 44px 26px 30px;
+    background: linear-gradient(180deg, #241c4d, #1a1438);
+    border: 2px solid var(--marigold); border-radius: 16px;
+    box-shadow: 0 0 40px rgba(245,165,36,.18) inset;
+    font-family: Georgia, "Times New Roman", serif; color: var(--ink);
+  }
+  .ofrenda::before { /* marigold petals along the top edge */
+    content: ""; position: absolute; left: 12px; right: 12px; top: 10px; height: 14px;
+    background: radial-gradient(circle at 10px 7px, var(--marigold) 5px, transparent 6px) 0 0 / 22px 14px repeat-x,
+                radial-gradient(circle at 21px 7px, var(--marigold-2) 4px, transparent 5px) 0 0 / 22px 14px repeat-x;
+  }
+  .candles { display: flex; justify-content: center; gap: 22px; margin-bottom: 14px; }
+  .candle { width: 14px; height: 46px; background: linear-gradient(#fff6dc, #e9d7a6); border-radius: 3px; position: relative; }
+  .candle::before { /* the flame */
+    content: ""; position: absolute; left: 50%; top: -20px; width: 12px; height: 20px; margin-left: -6px;
+    background: radial-gradient(circle at 50% 70%, #fff7c2, var(--marigold) 60%, transparent 72%);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; animation: flicker 1.6s infinite ease-in-out;
+    filter: drop-shadow(0 0 8px rgba(245,165,36,.9));
+  }
+  .candle:nth-child(2) { height: 58px; } .candle:nth-child(2)::before { animation-delay: .4s; }
+  .candle:nth-child(3)::before { animation-delay: .9s; }
+  @keyframes flicker { 0%,100% { transform: scale(1) rotate(-2deg); opacity: 1; } 50% { transform: scale(.88,1.06) rotate(2deg); opacity: .85; } }
+  @media (prefers-reduced-motion: reduce) { .candle::before { animation: none; } }
+  .ofrenda h2 { margin: 6px 0 2px; font-size: 1.8rem; color: var(--marigold-2); }
+  .ofrenda .sub { margin: 0 0 16px; color: var(--muted); font-style: italic; }
+  .remembrance { margin: 0 auto 22px; max-width: 58ch; font-size: 1.12rem; font-style: italic; }
+  .sections { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; text-align: left; }
+  .sec { background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .sec h3 { margin: 0 0 6px; font: 700 .76rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--marigold); }
+  .sec ul { margin: 0; padding-left: 18px; }
+  .sec li { margin: 4px 0; }
+  .note { margin: 22px auto 0; max-width: 50ch; font-size: 1.05rem; color: var(--marigold-2); }
+  .by { margin: 20px 0 0; font: .76rem system-ui, sans-serif; color: var(--muted); }
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .actions button { background: var(--night-2); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+                    padding: 8px 14px; font: 600 .86rem system-ui, sans-serif; cursor: pointer; }
+  .actions button:hover { border-color: var(--marigold); }
+  footer { padding-top: 26px; padding-bottom: 36px; color: var(--muted); font: .82rem system-ui, sans-serif; text-align: center; }
+
+  /* ---------- Print: only the ofrenda ---------- */
+  @media print {
+    body { background: #fff; }
+    body::before, header, .panel, .actions, footer, .pills { display: none !important; }
+    .layout { display: block; }
+    .ofrenda { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Ofrenda <span>Keeper</span></h1>
+  <p class="tag">A private place to remember someone you miss. You give the words. The machine may only use yours,
+     and a guard throws away anything it invents.</p>
+  <div class="pills" id="pills"></div>
+</header>
+
+<main class="layout">
+  <!-- LEFT: what you tell it -->
+  <section class="panel" aria-label="Tell us about them">
+    <h2>Who are you remembering?</h2>
+
+    <div id="sampleBox">
+      <label>Try a made-up person</label>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <form id="form" autocomplete="off">
+      <label for="name">Their name</label>
+      <input type="text" id="name" maxlength="80" placeholder="e.g. Abuela Rosa">
+      <label for="relationship">Who were they to you? <span class="hint">(optional)</span></label>
+      <input type="text" id="relationship" maxlength="60" placeholder="e.g. grandmother">
+      <label for="years">Years <span class="hint">(optional, written as you like)</span></label>
+      <input type="text" id="years" maxlength="40" placeholder="e.g. 1941 to 2019">
+      <label for="foods">Favourite foods <span class="hint">(one per line)</span></label>
+      <textarea id="foods"></textarea>
+      <label for="songs">Songs and music <span class="hint">(one per line)</span></label>
+      <textarea id="songs"></textarea>
+      <label for="sayings">Things they used to say <span class="hint">(one per line)</span></label>
+      <textarea id="sayings"></textarea>
+      <label for="stories">Stories <span class="hint">(one per line)</span></label>
+      <textarea id="stories"></textarea>
+      <label for="note">One thing you want to say to them <span class="hint">(optional)</span></label>
+      <input type="text" id="note" maxlength="240">
+      <label class="consent" id="consent"><input type="checkbox" id="allow">
+        I allow my words to be sent to a hosted model (a third party) to write the remembrance.</label>
+      <button class="go" type="submit" id="go">Light the candles</button>
+    </form>
+    <p class="small" id="privacy">Nothing is stored.</p>
+    <div class="error" id="error" role="alert"></div>
+  </section>
+
+  <!-- RIGHT: the ofrenda -->
+  <section aria-label="The ofrenda" aria-live="polite">
+    <div id="stage"><div class="panel empty">Pick a made-up person or fill in the form, then light the candles.</div></div>
+    <div class="actions" id="actions" hidden>
+      <button type="button" id="copy">Copy as text</button>
+      <button type="button" id="print">Print</button>
+      <button type="button" id="save">Download as one file</button>
+    </div>
+  </section>
+</main>
+
+<footer>Ofrenda Keeper: your words build the page, an open-weight model may phrase a remembrance, a guard checks it.</footer>
+
+<script>
+"use strict";
+/* ---------- Small helpers ---------- */
+const $ = (id) => document.getElementById(id);
+let status = {}, lastResult = null;
+
+/* Make an element with text. textContent is used everywhere, so nothing typed can run as code. */
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+/* ---------- Page start: status pills and sample chips ---------- */
+async function start() {
+  try { status = await (await fetch("/api/status")).json(); } catch (e) { status = {}; }
+  const pills = $("pills");
+  const where = status.backend === "ollama" ? "Runs on your computer"
+              : status.backend === "backboard" ? "Hosted model" : "No model: plain code";
+  pills.append(el("span", "pill green", where));
+  if (status.model) pills.append(el("span", "pill", "Model: " + status.model));
+  if (status.demo_mode) pills.append(el("span", "pill", "Public demo: made-up people only"));
+
+  const hosted = status.backend === "backboard";
+  if (status.demo_mode) {
+    $("form").style.display = "none";                      // the demo accepts built-in people only
+    $("privacy").textContent = "This public demo only uses made-up people. To remember someone real, run Ofrenda Keeper on your own computer with a local model.";
+  } else if (hosted) {
+    $("consent").style.display = "block";
+    $("privacy").textContent = "A hosted model is configured. Your words are sent to it only if you tick the box.";
+  } else {
+    $("privacy").textContent = "Your words stay on this computer. Nothing is stored.";
+  }
+  try {
+    const samples = await (await fetch("/api/samples")).json();
+    samples.forEach((s) => {
+      const b = el("button", "chip", s.label);
+      b.type = "button";
+      b.onclick = () => { document.querySelectorAll(".chip").forEach((c) => c.classList.remove("on")); b.classList.add("on"); run({ sample: s.id }); };
+      $("chips").append(b);
+    });
+  } catch (e) { $("sampleBox").style.display = "none"; }
+}
+
+/* ---------- Ask the server ---------- */
+async function run(payload) {
+  $("error").style.display = "none";
+  $("go").disabled = true;
+  try {
+    const r = await fetch("/api/ofrenda", { method: "POST", body: JSON.stringify(payload) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "Something went wrong.");
+    lastResult = data;
+    draw(data);
+  } catch (e) {
+    $("error").textContent = e.message;
+    $("error").style.display = "block";
+  } finally { $("go").disabled = false; }
+}
+
+$("form").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const v = (id) => $(id).value;
+  run({ name: v("name"), relationship: v("relationship"), years: v("years"), foods: v("foods"), songs: v("songs"),
+        sayings: v("sayings"), stories: v("stories"), note: v("note"), allow_hosted: $("allow").checked });
+});
+
+/* ---------- Draw the ofrenda ---------- */
+function draw(data) {
+  const o = data.ofrenda;
+  const card = el("article", "ofrenda");
+  const candles = el("div", "candles"); candles.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 3; i++) candles.append(el("div", "candle"));
+  card.append(candles, el("h2", "", o.title));
+  if (o.subtitle) card.append(el("p", "sub", o.subtitle));
+  card.append(el("p", "remembrance", data.remembrance));
+  const grid = el("div", "sections");
+  o.sections.forEach((s) => {
+    const box = el("div", "sec");
+    box.append(el("h3", "", s.title));
+    const ul = el("ul");
+    s.items.forEach((t) => ul.append(el("li", "", t)));
+    box.append(ul); grid.append(box);
+  });
+  card.append(grid);
+  if (o.note) card.append(el("p", "note", "“" + o.note + "”"));
+  card.append(el("p", "by", "Remembrance " + data.written_by + ". Every food, song, saying and story above is in your own words."));
+  $("stage").replaceChildren(card);
+  $("actions").hidden = false;
+}
+
+/* ---------- Copy, print, download ---------- */
+function asText() {
+  if (!lastResult) return "";
+  const o = lastResult.ofrenda, out = [o.title];
+  if (o.subtitle) out.push(o.subtitle);
+  out.push("", lastResult.remembrance);
+  o.sections.forEach((s) => { out.push("", s.title); s.items.forEach((t) => out.push("- " + t)); });
+  if (o.note) out.push("", "“" + o.note + "”");
+  return out.join("\n");
+}
+$("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(asText()); $("copy").textContent = "Copied"; }
+  catch (e) { $("copy").textContent = "Copy failed"; }
+  setTimeout(() => { $("copy").textContent = "Copy as text"; }, 1600);
+};
+$("print").onclick = () => window.print();
+/* One self-contained .html file: it needs no server, so the ofrenda outlives this app. */
+$("save").onclick = () => {
+  const card = document.querySelector(".ofrenda");
+  if (!card) return;
+  const css = document.querySelector("style").textContent;
+  const html = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" +
+    lastResult.ofrenda.title.replace(/[<>&]/g, "") + "</title><style>" + css + "body{padding:24px}.ofrenda{max-width:900px;margin:0 auto}</style></head><body>" +
+    card.outerHTML + "</body></html>";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  a.download = "ofrenda.html";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+
+start();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+== Abuela Rosa (made-up person)
+We remember Abuela Rosa, our grandmother. Abuela used to say: "Eat first, then talk." A story we keep: She hid sweets in her apron pocket for every child who came to visit. Come and eat, we kept your seat.
+sections: ['foods', 'songs', 'sayings', 'stories'] | written by plain code from your words (no model)
+
+== Grandpa Kwame (made-up person)
+We remember Grandpa Kwame, our grandfather. Grandpa used to say: "Slow rain fills the river." A story we keep: He fixed the neighbours' radios for free and listened to football with them on the porch. Your chair is still by the radio.
+sections: ['foods', 'songs', 'sayings', 'stories'] | written by plain code from your words (no model)
+
